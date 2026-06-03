@@ -1,0 +1,67 @@
+# ContextOS .gitignore
+
+docs/
+
+# ---- Python ----
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+
+# ---- Virtual environments ----
+.venv/
+venv/
+env/
+ENV/
+
+# ---- IDE ----
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# ---- Environment ----
+.env
+.env.local
+.env.*.local
+
+# ---- Database ----
+*.db
+*.sqlite
+*.sqlite3
+
+# ---- Vector DB ----
+.chroma/
+faiss_index/
+
+# ---- Logs ----
+*.log
+logs/
+
+# ---- Test artifacts ----
+.pytest_cache/
+.coverage
+htmlcov/
+.hypothesis/
+
+# ---- Build artifacts ----
+node_modules/
+frontend/dist/
+frontend/build/
+
+# ---- Benchmark output ----
+benchmark_results/
+reports/
+
+# ---- Model files ----
+*.pkl
+*.joblib
+*.pt
+*.pth
