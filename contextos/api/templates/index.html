@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ContextOS Dashboard</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <h1>ContextOS Profiler</h1>
+        </div>
+    </nav>
+
+    <div class="content-container">
+        
+        <div class="metrics-grid">
+            <div class="card metric-card" style="background-color: var(--primary-yellow);">
+                <h3>Memory Tiers</h3>
+                <div id="tier-stats" class="stats-list">Loading...</div>
+            </div>
+            
+            <div class="card metric-card" style="background-color: var(--primary-purple);">
+                <h3>Token Budget</h3>
+                <div class="budget-bar-container">
+                    <div id="budget-fill" class="budget-fill"></div>
+                </div>
+                <p id="budget-text" class="stat-text">Loading...</p>
+            </div>
+            
+            <div class="card metric-card" style="background-color: var(--skills-bg);">
+                <h3>Semantic Cache</h3>
+                <div id="cache-stats" class="stats-list">Loading...</div>
+            </div>
+        </div>
+
+        <div class="section-tab">
+            <h2>Context Scheduler</h2>
+        </div>
+        <div class="section-content console-bg">
+            <div class="console-layout">
+                <div class="query-panel">
+                    <label>Simulate Query</label>
+                    <textarea id="query-input" class="neo-textarea" placeholder="Ask the agent something..."></textarea>
+                    <button id="run-query-btn" class="button">Allocate Context</button>
+                    <div id="query-spinner" class="spinner" style="display: none;"></div>
+                    <div id="query-status" class="status-msg"></div>
+                </div>
+                <div class="window-panel">
+                    <label>Packed Context Window</label>
+                    <div id="context-window-blocks" class="blocks-container">
+                        <div class="empty-state">Run a query to see the packed context window.</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+    </div>
+
+    <script src="/static/script.js"></script>
+</body>
+</html>
