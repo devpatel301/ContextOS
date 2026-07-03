@@ -1,232 +1,55 @@
-# ContextOS
+# ContextOS: Operating System for LLM Context
 
-> **An Operating System for LLM Context**
-> Managing agent memory the way an OS manages RAM — with scheduling, paging, compression, caching, and eviction.
-
----
+ContextOS is a framework that manages LLM agent memory using operating system primitives. Instead of treating context as an infinite string or relying exclusively on top-k vector search, ContextOS introduces scheduling, paging, compression, caching, and eviction to the context window.
 
 ## The Problem
 
-Every LLM agent today works like this:
+Standard LLM agents operate by appending conversation history, tool outputs, reasoning traces, and retrieved documents into a single prompt. For long-running workflows, this approach quickly exceeds token limits, increases latency, drives up API costs, and leads to selective amnesia where critical information is dropped.
 
-```
-User → Prompt → LLM → Response
-```
+Traditional Retrieval-Augmented Generation (RAG) attempts to solve this by storing data in a vector database and retrieving the top results. However, naive retrieval lacks lifecycle management. It does not compress older memories, deduplicate redundant thoughts, or schedule information dynamically based on priority and recency.
 
-But after a real conversation:
+## The Solution
 
-```
-Conversation history
-+ 20 documents
-+ tool outputs
-+ past reasoning traces
-+ retrieved memories
-+ generated code
-+ web search results
-= 100,000+ token prompt
-```
+Context management is fundamentally an operating systems problem. An OS manages RAM through paging, scheduling, and eviction based on workload demands. ContextOS brings these same principles to LLM agents.
 
-This causes:
+When an agent queries the system, ContextOS evaluates the available token budget and dynamically selects what gets loaded from working memory, retrieved from long-term storage, compressed, or dropped entirely. It also intercepts redundant queries using a semantic cache to save API calls.
 
-- **Context overflow** — the model simply can't fit everything
-- **Cost explosion** — token pricing scales linearly
-- **Latency degradation** — larger prompts are slower
-- **Selective amnesia** — critical facts get dropped silently
+## Core Architecture
 
-The industry's answer is RAG. But most RAG is just:
+ContextOS is built around components that mirror traditional OS memory management:
 
-```
-embed → vector DB → top-k
-```
-
-That's primitive. That's like replacing RAM with a lookup table and calling it a memory manager.
-
----
-
-## The Insight
-
-Context management is an **operating systems problem**.
-
-An OS never loads everything into RAM. It pages, schedules, compresses, caches, and evicts memory intelligently — using policies tuned to workload patterns.
-
-ContextOS applies the same thinking to LLM agents.
-
-```
-Developer calls:
-
-    context = contextos.allocate(budget=16_000, query=user_query)
-
-ContextOS decides:
-  - What gets loaded from working memory
-  - What gets retrieved from long-term storage
-  - What gets compressed vs. dropped
-  - What gets served from semantic cache
-  - How the token budget is allocated across competing memories
-```
-
-Instead of developers writing `messages[-10:]` and hoping, ContextOS gives agents a principled, observable memory substrate.
-
----
-
-## High-Level Architecture
-
-```
-┌─────────────────────────────────────────────────┐
-│                   User / Agent                  │
-└───────────────────────┬─────────────────────────┘
-                        │
-                        ▼
-┌─────────────────────────────────────────────────┐
-│              Context Scheduler                  │
-│   (token budget allocation, priority queuing)   │
-└────────┬─────────────────────┬──────────────────┘
-         │                     │
-         ▼                     ▼
-┌────────────────┐   ┌──────────────────────────┐
-│ Semantic Cache │   │     Memory Manager        │
-│ (cache hits    │   │  (hierarchy controller)   │
-│  skip LLM)     │   └──────┬───────────┬────────┘
-└────────────────┘          │           │
-                            ▼           ▼
-                   ┌──────────────┐  ┌──────────────────┐
-                   │ Short-Term   │  │   Long-Term       │
-                   │ Memory       │  │   Memory          │
-                   │ (working +   │  │   (episodic +     │
-                   │  episodic)   │  │    semantic +     │
-                   └──────┬───────┘  │    archived)      │
-                          │          └────────┬──────────┘
-                          └────────┬──────────┘
-                                   │
-                                   ▼
-                        ┌──────────────────────┐
-                        │     Vector DB         │
-                        │  (ChromaDB / FAISS)   │
-                        └──────────────────────┘
-                                   │
-                                   ▼
-                        ┌──────────────────────┐
-                        │  Observability Layer  │
-                        │  (profiler, metrics,  │
-                        │   dashboard)          │
-                        └──────────────────────┘
-```
-
----
-
-## Core Components
-
-| Component                   | OS Analogy            | Purpose                                            |
-| --------------------------- | --------------------- | -------------------------------------------------- |
-| **Memory Manager**    | RAM controller        | Manages the full memory hierarchy                  |
-| **Context Scheduler** | CPU scheduler         | Allocates token budget across competing memories   |
-| **Context Pager**     | Virtual memory / swap | Pages old memories out, loads relevant ones in     |
-| **Memory Compressor** | zRAM / zswap          | Summarizes verbose memories to save tokens         |
-| **Semantic Cache**    | CPU instruction cache | Returns cached LLM responses on similar queries    |
-| **Eviction Engine**   | Page replacement      | Decides what to drop (LRU / LFU / FIFO / priority) |
-| **Garbage Collector** | JVM GC                | Removes duplicates, stale, and expired memories    |
-| **Context Profiler**  | `htop` / `vmstat` | Visualizes memory usage, cost, latency, decisions  |
-| **Agent Runtime**     | Process scheduler     | Executes multi-step workflows with checkpointing   |
-| **Benchmark Harness** | perf / valgrind       | Compares memory policies quantitatively            |
-
----
+* **Memory Manager (RAM Controller):** Oversees the entire memory hierarchy, migrating data between short-term and long-term storage.
+* **Context Scheduler (CPU Scheduler):** Allocates the available token budget across competing memory blocks based on priority scores.
+* **Context Pager (Virtual Memory):** Pages old memories out to disk and loads relevant ones back into the active context window.
+* **Memory Compressor (zRAM):** Summarizes verbose or older memories to maximize token efficiency.
+* **Semantic Cache (Instruction Cache):** Intercepts queries and returns cached responses for semantically identical requests.
+* **Eviction Engine (Page Replacement):** Determines which blocks to drop when capacity is reached, supporting LRU, LFU, FIFO, and hybrid policies.
+* **Garbage Collector (GC):** Periodically runs in the background to deduplicate redundant memories and purge expired data.
 
 ## Memory Hierarchy
 
-Directly mirrors CPU memory hierarchy:
+The system enforces a strict hierarchy to organize information:
 
-```
-┌───────────────────────────────┐   ← Registers
-│  System Prompt / Instructions │     Always present
-└───────────────────────────────┘
-┌───────────────────────────────┐   ← L1 Cache
-│  Working Memory               │     Current turn context
-└───────────────────────────────┘
-┌───────────────────────────────┐   ← L2 Cache
-│  Conversation Memory          │     Recent N turns
-└───────────────────────────────┘
-┌───────────────────────────────┐   ← RAM
-│  Episodic Memory              │     Key past events, compressed
-└───────────────────────────────┘
-┌───────────────────────────────┐   ← SSD
-│  Semantic Memory              │     Facts, summaries, knowledge
-└───────────────────────────────┘
-┌───────────────────────────────┐   ← HDD
-│  Archived Memory              │     Cold storage, vector DB
-└───────────────────────────────┘
-```
-
----
+1. **System Instructions (Registers):** Core rules that are never evicted.
+2. **Working Memory (L1 Cache):** The current turn's active context.
+3. **Conversation Memory (L2 Cache):** The most recent interaction history.
+4. **Episodic Memory (RAM):** Compressed logs of past actions and events.
+5. **Semantic Memory (SSD):** Verified facts and knowledge bases.
+6. **Archived Memory (HDD):** Cold storage maintained in a vector database for infrequent retrieval.
 
 ## Use Cases
 
-### 1. Long-Running Research Agent
+**Long-Running Agents:** For agents conducting extensive research, ContextOS ensures that early findings remain accessible and are not blindly pushed out of the context window.
 
-A research agent that reads 50 papers over a 2-hour session. Without ContextOS, it forgets paper #3 by the time it reads paper #40. With ContextOS, the most relevant facts are always in context — compressed, ranked, and retrieved on demand.
+**Customer Support:** Support bots handling multi-day troubleshooting cases can maintain compressed episodic memory of previous sessions without duplicating context.
 
-### 2. Customer Support Bot
+**Codebase Navigation:** Coding assistants can page specific files in and out of the context window based on current relevance rather than indiscriminately truncating files.
 
-A support bot handling a complex multi-session troubleshooting case. ContextOS maintains a compressed episodic memory of previous sessions, so the agent never asks the same question twice, and important customer context persists across days.
+**Multi-Agent Workflows:** ContextOS provides sandboxed memory management, allowing multiple agents to collaborate while maintaining independent, version-controlled context states.
 
-### 3. Coding Assistant with Codebase Context
+## Technical Implementation
 
-An agent exploring a large codebase. ContextOS pages code files in and out of context based on relevance to the current task, rather than naively truncating or stuffing everything in.
-
-### 4. Multi-Agent Workflow
-
-A planner → coder → reviewer pipeline where each agent shares a common memory. ContextOS manages read/write access, deduplication, and version history across agents.
-
-### 5. Cost-Sensitive Production Deployment
-
-Every repeated or semantically-similar query hits the semantic cache instead of the LLM. Token usage and API cost drop dramatically for repetitive workloads.
+ContextOS is written in Python and provides a FastAPI-based observability backend for profiling memory usage. It integrates seamlessly with standard LLM APIs. The memory substrate is backed by SQLite for relational metadata and ChromaDB for vector storage, with native support for local embedding models.
 
 ---
-
-## What Makes This Different
-
-| Typical RAG           | ContextOS                                   |
-| --------------------- | ------------------------------------------- |
-| Top-k retrieval       | Scheduled retrieval with priority scoring   |
-| Static context window | Dynamic token budget allocation             |
-| No eviction           | LRU / LFU / FIFO / hybrid eviction policies |
-| No compression        | Summarization-based memory compression      |
-| No caching            | Semantic similarity cache                   |
-| No observability      | Full profiler with metrics and dashboard    |
-| No evaluation         | Built-in benchmark harness                  |
-| Monolithic            | Pluggable, policy-swappable architecture    |
-
----
-
-## Documentation
-
-| Document                                 | Description                                      |
-| ---------------------------------------- | ------------------------------------------------ |
-| [ROADMAP.md](./docs/ROADMAP.md)           | Phase-by-phase build plan                        |
-| [ARCHITECTURE.md](./docs/ARCHITECTURE.md) | Detailed system design and data flows            |
-| [FEATURES.md](./docs/FEATURES.md)         | Feature specifications with implementation notes |
-| [EVALUATION.md](./docs/EVALUATION.md)     | Metrics, benchmarks, and evaluation methodology  |
-| [EXTENSIONS.md](./docs/EXTENSIONS.md)     | Advanced features and future directions          |
-
----
-
-## Tech Stack
-
-| Layer         | Technology                            |
-| ------------- | ------------------------------------- |
-| Backend       | Python 3.11+, FastAPI                 |
-| LLM           | OpenAI API + Ollama (local)           |
-| Embeddings    | sentence-transformers                 |
-| Vector DB     | ChromaDB (dev), FAISS (production)    |
-| Storage       | SQLite (dev), PostgreSQL (production) |
-| Observability | Prometheus + Grafana                  |
-| Frontend      | React + Recharts                      |
-| Testing       | pytest, hypothesis                    |
-
----
-
-## Status
-
-> 🚧 **Pre-development** — Planning phase. See [ROADMAP.md](./docs/ROADMAP.md).
-
----
-
-*ContextOS is a systems research project exploring whether OS-inspired memory management primitives produce meaningfully better long-context agent behavior than naive RAG.*
+*ContextOS is a systems research project exploring the application of OS-level memory primitives to autonomous agents.*
