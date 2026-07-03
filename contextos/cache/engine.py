@@ -36,7 +36,7 @@ class SemanticCache:
         self,
         store: "CacheStore",
         embedder: Embedder,
-        similarity_threshold: float = 0.92,
+        similarity_threshold: float = 0.85,
         ttl_hours: int = 24,
     ):
         self.store = store

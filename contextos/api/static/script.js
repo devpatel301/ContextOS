@@ -4,6 +4,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const queryBtn = document.getElementById("run-query-btn");
     queryBtn.addEventListener("click", runQuery);
+
+    const resetBtn = document.getElementById("reset-memory-btn");
+    if (resetBtn) {
+        resetBtn.addEventListener("click", resetMemory);
+    }
 });
 
 async function fetchStatus() {
@@ -124,4 +129,35 @@ function renderBlocks(blocks, container) {
         `;
         container.appendChild(div);
     });
+}
+
+async function resetMemory() {
+    const btn = document.getElementById("reset-memory-btn");
+    if (!btn) return;
+    
+    if (!confirm("Are you sure you want to clear all memory logs, cache entries, and vector data? This will reseed with fresh defaults.")) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.innerText = "Clearing...";
+    
+    try {
+        const response = await fetch("/api/reset", {
+            method: "POST"
+        });
+        const data = await response.json();
+        
+        // Reset query status and console
+        document.getElementById("query-status").innerHTML = "";
+        document.getElementById("context-window-blocks").innerHTML = '<div class="empty-state">Memory reset completed successfully! Run a query to begin.</div>';
+        
+        await fetchStatus();
+    } catch (e) {
+        console.error("Failed to reset memory:", e);
+        alert("Failed to reset memory.");
+    } finally {
+        btn.disabled = false;
+        btn.innerText = "Reset Memory";
+    }
 }

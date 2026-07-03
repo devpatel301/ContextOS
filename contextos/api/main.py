@@ -17,7 +17,7 @@ from contextos.models.tier import MemoryTier
 config = ContextConfig(
     db_path="./demo_dashboard.db",
     chroma_persist_dir="./.chroma_dashboard",
-    embedding_stub=True,  # Fast string hashing for demo
+    embedding_stub=False,  # Fast string hashing for demo
     enable_semantic_cache=True,
     token_budget=2000,
     working_memory_reserve=500,
@@ -95,3 +95,33 @@ async def run_query(req: QueryRequest):
             } for b in window.blocks
         ]
     }
+
+@app.post("/api/reset")
+async def reset_memory():
+    # 1. Clear SQLite store
+    with cos._store._conn:
+        cos._store._conn.execute("DELETE FROM memory_blocks")
+        
+    # 2. Clear Chroma collection
+    try:
+        cos.retriever.vector_index.client.delete_collection("contextos_memories")
+        cos.retriever.vector_index.collection = cos.retriever.vector_index.client.get_or_create_collection(
+            name="contextos_memories",
+            metadata={"hnsw:space": "cosine"}
+        )
+    except Exception as e:
+        import logging
+        logging.getLogger(__name__).warning(f"Failed to reset ChromaDB collection: {e}")
+        
+    # 3. Clear Cache store
+    if cos.cache:
+        with cos.cache.store._conn:
+            cos.cache.store._conn.execute("DELETE FROM semantic_cache")
+            
+    # 4. Re-seed default initial data
+    cos.store("System: You are a helpful assistant.", tier=MemoryTier.WORKING)
+    for i in range(5):
+        cos.store(f"Episodic memory block {i}", tier=MemoryTier.EPISODIC)
+    cos.store("Fact: Python is a programming language.", tier=MemoryTier.SEMANTIC)
+    
+    return {"status": "success", "message": "Memory and cache cleared and re-seeded."}
