@@ -80,7 +80,7 @@ class ContextConfig:
 
     # ── Semantic cache ─────────────────────────────────────────────────────────
     enable_semantic_cache: bool = True
-    cache_similarity_threshold: float = 0.92
+    cache_similarity_threshold: float = 0.85
     cache_ttl_hours: int = 24
 
     # ── Garbage collector ──────────────────────────────────────────────────────

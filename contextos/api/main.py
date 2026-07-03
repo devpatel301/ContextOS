@@ -19,6 +19,7 @@ config = ContextConfig(
     chroma_persist_dir="./.chroma_dashboard",
     embedding_stub=False,  # Fast string hashing for demo
     enable_semantic_cache=True,
+    cache_similarity_threshold=0.85,
     token_budget=2000,
     working_memory_reserve=500,
 )
