@@ -9,6 +9,24 @@ document.addEventListener("DOMContentLoaded", () => {
     if (resetBtn) {
         resetBtn.addEventListener("click", resetMemory);
     }
+
+    const slider = document.getElementById("threshold-slider");
+    if (slider) {
+        slider.addEventListener("input", (e) => {
+            document.getElementById("threshold-val").innerText = e.target.value;
+        });
+        slider.addEventListener("change", async (e) => {
+            try {
+                await fetch("/api/config/threshold", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ threshold: parseFloat(e.target.value) })
+                });
+            } catch (err) {
+                console.error("Failed to update similarity threshold:", err);
+            }
+        });
+    }
 });
 
 async function fetchStatus() {
@@ -19,6 +37,13 @@ async function fetchStatus() {
         updateTierStats(data.memory.tiers);
         updateCacheStats(data.cache);
         
+        // Update threshold slider value if not actively being dragged/focused
+        const slider = document.getElementById("threshold-slider");
+        if (slider && document.activeElement !== slider) {
+            slider.value = data.config.threshold;
+            document.getElementById("threshold-val").innerText = data.config.threshold;
+        }
+
         // Only update budget if no query result is displaying it
         if (!document.getElementById("budget-fill").hasAttribute("data-locked")) {
             const usedTokens = data.memory.tiers.working.tokens + data.memory.tiers.episodic.tokens;

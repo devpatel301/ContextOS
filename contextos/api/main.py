@@ -66,9 +66,18 @@ async def get_status():
         "cache": cache_status,
         "config": {
             "budget": config.token_budget,
-            "policy": config.scheduling_policy
+            "policy": config.scheduling_policy,
+            "threshold": config.cache_similarity_threshold
         }
     }
+
+@app.post("/api/config/threshold")
+async def update_threshold(req: dict):
+    t_val = req.get("threshold", 0.85)
+    config.cache_similarity_threshold = t_val
+    if cos.cache:
+        cos.cache.threshold = t_val
+    return {"status": "success", "threshold": t_val}
 
 @app.post("/api/query")
 async def run_query(req: QueryRequest):
