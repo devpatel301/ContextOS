@@ -1,55 +1,65 @@
-# ContextOS: Operating System for LLM Context
+# ContextOS
 
-ContextOS is a framework that manages LLM agent memory using operating system primitives. Instead of treating context as an infinite string or relying exclusively on top-k vector search, ContextOS introduces scheduling, paging, compression, caching, and eviction to the context window.
+ContextOS handles LLM context windows the same way an operating system handles RAM. Instead of blindly stuffing everything into a single prompt or relying on basic top-k vector search, it uses scheduling, paging, compression, and caching to manage an agent's memory.
 
-## The Problem
+## Why build this?
 
-Standard LLM agents operate by appending conversation history, tool outputs, reasoning traces, and retrieved documents into a single prompt. For long-running workflows, this approach quickly exceeds token limits, increases latency, drives up API costs, and leads to selective amnesia where critical information is dropped.
+Most LLM agents today just append conversation history, retrieved documents, and tool outputs into one massive prompt. When you hit the token limit, things break. Even if you don't hit the limit, huge prompts are slow, expensive, and cause the model to forget facts stuck in the middle.
 
-Traditional Retrieval-Augmented Generation (RAG) attempts to solve this by storing data in a vector database and retrieving the top results. However, naive retrieval lacks lifecycle management. It does not compress older memories, deduplicate redundant thoughts, or schedule information dynamically based on priority and recency.
+Typical Retrieval-Augmented Generation (RAG) tries to fix this by storing data in a vector DB and returning the most relevant chunks. But it's static. It doesn't compress old memories, it doesn't deduplicate, and it doesn't prioritize information based on how recently it was used.
 
-## The Solution
+I built ContextOS to treat the context window like limited physical RAM. It decides what to page in, what to compress, and what to evict based on the workload.
 
-Context management is fundamentally an operating systems problem. An OS manages RAM through paging, scheduling, and eviction based on workload demands. ContextOS brings these same principles to LLM agents.
+## How it works
 
-When an agent queries the system, ContextOS evaluates the available token budget and dynamically selects what gets loaded from working memory, retrieved from long-term storage, compressed, or dropped entirely. It also intercepts redundant queries using a semantic cache to save API calls.
+When an agent needs context, you pass it a token budget. ContextOS will then:
+- Load recent turns from working memory.
+- Retrieve relevant facts from long-term storage (ChromaDB).
+- Compress older memories into summaries to save space.
+- Intercept duplicate queries using a semantic cache.
+- Allocate the remaining token budget based on a scoring algorithm.
 
-## Core Architecture
+## Core concepts
 
-ContextOS is built around components that mirror traditional OS memory management:
+- **Memory Manager:** Moves data between short-term (SQLite) and long-term (ChromaDB) storage.
+- **Context Scheduler:** Packs the context window optimally without overflowing the token limit.
+- **Memory Compressor:** Shrinks older memories down to their core facts.
+- **Semantic Cache:** Returns cached LLM outputs if a semantically identical query was already processed.
+- **Eviction Engine:** Drops blocks using LRU (least recently used) or hybrid policies when memory fills up.
+- **Garbage Collector:** Runs in the background to clean up expired or duplicate memories.
 
-* **Memory Manager (RAM Controller):** Oversees the entire memory hierarchy, migrating data between short-term and long-term storage.
-* **Context Scheduler (CPU Scheduler):** Allocates the available token budget across competing memory blocks based on priority scores.
-* **Context Pager (Virtual Memory):** Pages old memories out to disk and loads relevant ones back into the active context window.
-* **Memory Compressor (zRAM):** Summarizes verbose or older memories to maximize token efficiency.
-* **Semantic Cache (Instruction Cache):** Intercepts queries and returns cached responses for semantically identical requests.
-* **Eviction Engine (Page Replacement):** Determines which blocks to drop when capacity is reached, supporting LRU, LFU, FIFO, and hybrid policies.
-* **Garbage Collector (GC):** Periodically runs in the background to deduplicate redundant memories and purge expired data.
+## How to run it
 
-## Memory Hierarchy
+**1. Install dependencies**
+```bash
+# Optional: create a virtual environment first
+pip install -r requirements.txt
+```
 
-The system enforces a strict hierarchy to organize information:
+**2. Run the observability dashboard**
+ContextOS comes with a built-in FastAPI dashboard to visualize memory usage, cache hit rates, and token budgets in real-time.
+```bash
+uvicorn contextos.api.main:app --reload
+```
+Then open `http://localhost:8000` in your browser.
 
-1. **System Instructions (Registers):** Core rules that are never evicted.
-2. **Working Memory (L1 Cache):** The current turn's active context.
-3. **Conversation Memory (L2 Cache):** The most recent interaction history.
-4. **Episodic Memory (RAM):** Compressed logs of past actions and events.
-5. **Semantic Memory (SSD):** Verified facts and knowledge bases.
-6. **Archived Memory (HDD):** Cold storage maintained in a vector database for infrequent retrieval.
+**3. Run the examples**
+I've included several demo scripts in the `examples/` directory that show off the different features. 
 
-## Use Cases
+For the complete agent runtime (which shows tool usage and memory persistence):
+```bash
+python examples/phase7_demo.py
+```
 
-**Long-Running Agents:** For agents conducting extensive research, ContextOS ensures that early findings remain accessible and are not blindly pushed out of the context window.
+For testing multi-agent isolation and context version control (like `git checkout` for agent memory):
+```bash
+python examples/phase9_demo.py
+```
 
-**Customer Support:** Support bots handling multi-day troubleshooting cases can maintain compressed episodic memory of previous sessions without duplicating context.
-
-**Codebase Navigation:** Coding assistants can page specific files in and out of the context window based on current relevance rather than indiscriminately truncating files.
-
-**Multi-Agent Workflows:** ContextOS provides sandboxed memory management, allowing multiple agents to collaborate while maintaining independent, version-controlled context states.
-
-## Technical Implementation
-
-ContextOS is written in Python and provides a FastAPI-based observability backend for profiling memory usage. It integrates seamlessly with standard LLM APIs. The memory substrate is backed by SQLite for relational metadata and ChromaDB for vector storage, with native support for local embedding models.
-
----
-*ContextOS is a systems research project exploring the application of OS-level memory primitives to autonomous agents.*
+**4. Run the benchmarks**
+I built a CLI harness to quantitatively test memory retention against naive RAG approaches.
+```bash
+python -m contextos.benchmark run --workload long_conversation
+python -m contextos.benchmark run --workload qa
+python -m contextos.benchmark run --workload repeated_queries
+```
