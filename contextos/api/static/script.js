@@ -124,7 +124,7 @@ async function runQuery() {
 
         // Update Cache status message
         if (data.cache_hit) {
-            statusMsg.innerHTML = `<span class="hit">⚡ Cache HIT</span> — Returned instantly in ${latency}s`;
+            statusMsg.innerHTML = `<span class="hit"> Cache HIT</span> — Returned instantly in ${latency}s`;
             blocksContainer.innerHTML = '<div class="empty-state">Served entirely from Semantic Cache. No LLM packing needed.</div>';
         } else {
             statusMsg.innerHTML = `<span class="miss">Network MISS</span> — LLM generated in ${latency}s`;

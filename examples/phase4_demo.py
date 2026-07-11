@@ -90,7 +90,7 @@ for e in all_entries:
     print(f"  - '{e.query[:30]}...' -> hits: {e.hit_count}")
 
 cos.close()
-print("\n✓ Phase 4 demo complete.")
+print("\n[OK] Phase 4 demo complete.")
 
 # Cleanup
 import os

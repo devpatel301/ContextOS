@@ -160,7 +160,7 @@ for tier_name, info in status["tiers"].items():
 
 # Cleanup
 cos.close()
-print("\n✓ Demo complete. Check demo.db to inspect the SQLite database.")
+print("\n[OK] Demo complete. Check demo.db to inspect the SQLite database.")
 
 # Clean up demo DB
 # import os

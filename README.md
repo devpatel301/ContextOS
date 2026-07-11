@@ -13,6 +13,7 @@ I built ContextOS to treat the context window like limited physical RAM. It deci
 ## How it works
 
 When an agent needs context, you pass it a token budget. ContextOS will then:
+
 - Load recent turns from working memory.
 - Retrieve relevant facts from long-term storage (ChromaDB).
 - Compress older memories into summaries to save space.
@@ -31,33 +32,38 @@ When an agent needs context, you pass it a token budget. ContextOS will then:
 ## How to run it
 
 **1. Install dependencies**
+
 ```bash
-# Optional: create a virtual environment first
 pip install -r requirements.txt
 ```
 
 **2. Run the observability dashboard**
 ContextOS comes with a built-in FastAPI dashboard to visualize memory usage, cache hit rates, and token budgets in real-time.
+
 ```bash
 uvicorn contextos.api.main:app --reload
 ```
+
 Then open `http://localhost:8000` in your browser.
 
 **3. Run the examples**
-I've included several demo scripts in the `examples/` directory that show off the different features. 
+I've included several demo scripts in the `examples/` directory that show off the different features.
 
 For the complete agent runtime (which shows tool usage and memory persistence):
+
 ```bash
 python examples/phase7_demo.py
 ```
 
 For testing multi-agent isolation and context version control (like `git checkout` for agent memory):
+
 ```bash
 python examples/phase9_demo.py
 ```
 
 **4. Run the benchmarks**
 I built a CLI harness to quantitatively test memory retention against naive RAG approaches.
+
 ```bash
 python -m contextos.benchmark run --workload long_conversation
 python -m contextos.benchmark run --workload qa

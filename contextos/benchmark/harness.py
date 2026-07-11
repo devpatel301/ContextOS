@@ -61,7 +61,7 @@ def _benchmark_long_conversation():
     print(f"\n[Results]")
     print(f"Total Blocks Stored: 101")
     print(f"Blocks Evicted to Archive: {status['tiers']['archived']['blocks']}")
-    print(f"Fact Retained in Context Window: {'✅ Yes' if fact_retained else '❌ No'}")
+    print(f"Fact Retained in Context Window: {'Yes' if fact_retained else 'No'}")
     print(f"Total time for 100 turns + retrieval: {latency:.2f}s")
     print(f"Tokens packed perfectly in budget: {win.tokens_used}/{win.token_budget}")
     
@@ -91,7 +91,7 @@ def _benchmark_qa():
     
     print(f"\n[Results]")
     print(f"Documents Ingested: 50")
-    print(f"Target found in Context Window: {'✅ Yes' if found else '❌ No'}")
+    print(f"Target found in Context Window: {'Yes' if found else 'No'}")
     print(f"Time: {latency:.2f}s")
     
     cos.close()
@@ -118,7 +118,7 @@ def _benchmark_cache():
     t1 = time.time()
     
     print(f"\n[Results]")
-    print(f"Cache Hit 1 (Exact): {'✅ Yes' if hit1 else '❌ No'} in {(t1-t0)*1000:.2f}ms")
+    print(f"Cache Hit 1 (Exact): {'Yes' if hit1 else 'No'} in {(t1-t0)*1000:.2f}ms")
     
     cos.close()
     _cleanup("./bench_cache.db", "./.chroma_bench_cache")

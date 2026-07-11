@@ -108,4 +108,4 @@ if os.path.exists("./semantic_cache.db"):
     os.remove("./semantic_cache.db")
 if os.path.exists("./.chroma_demo"):
     shutil.rmtree("./.chroma_demo")
-print("\n✓ Phase 5 demo complete. (demo DBs cleaned up)")
+print("\n[OK] Phase 5 demo complete. (demo DBs cleaned up)")

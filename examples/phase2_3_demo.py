@@ -112,7 +112,7 @@ print(f"\nEpisodic tier: {cos.status()['tiers']['episodic']['blocks']} blocks, {
 print(f"Episodic budget: {config.episodic_tier_budget} tokens")
 
 if ep_tokens > config.episodic_tier_budget:
-    print(f"\n  ⚠  Over budget by {ep_tokens - config.episodic_tier_budget} tokens!")
+    print(f"\n  [Warning]  Over budget by {ep_tokens - config.episodic_tier_budget} tokens!")
     print("  Running eviction (LRU policy)...")
     evicted = cos.evict(tier=MemoryTier.EPISODIC)
     print(f"  Evicted {len(evicted)} blocks:")
@@ -121,7 +121,7 @@ if ep_tokens > config.episodic_tier_budget:
     ep_after = cos.status()["tiers"]["episodic"]["tokens"]
     print(f"  Episodic tier now: {ep_after} tokens (was {ep_tokens})")
 else:
-    print("  ✓ Under budget, no eviction needed.")
+    print("  [OK] Under budget, no eviction needed.")
 
 # ── Garbage Collector ─────────────────────────────────────────────────────────
 print("\n--- Garbage Collector ---")
@@ -148,7 +148,7 @@ for tier_name, info in status["tiers"].items():
         print(f"  {tier_name:10s}: {info['blocks']} blocks, {info['tokens']} tokens")
 
 cos.close()
-print("\n✓ Phase 2+3 demo complete.")
+print("\n[OK] Phase 2+3 demo complete.")
 
 # Cleanup
 import os
